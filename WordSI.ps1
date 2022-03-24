@@ -1,17 +1,16 @@
 Clear-Host
 
+# Data set will be loaded only once for the sake of performance
 if ($TrainData.Count -eq 0) {
-    [System.Collections.ArrayList][string[]]$TrainData = Get-Content .\DataSet\Train_DataSet.txt
-    $TrainData = $TrainData.ToArray()
-
-    '{0} Words has been loaded.' -f $TrainData.Count 
+    [System.Collections.ArrayList][string[]]$global:TrainData = Get-Content .\DataSet\Train_DataSet.txt
+    "{0} Words has been loaded." -f $TrainData.Count 
 }
 
 function Get-Input {
 
-    $NumOf_Input = 10
+    $NumOf_Input = 12
     $Inputs = foreach ($i in 1..$NumOf_Input) {
-        $Randomize = ($TrainData | Get-Random).replace(' ', '')
+        $Randomize = ($TrainData | Get-Random).Replace(' ', '')
         [PSCustomObject]@{
             Word = $Randomize
             Characters = $Randomize.Length # Characters in a word
@@ -27,27 +26,29 @@ function Guess ($Inputs, $Weight) {
     [System.Collections.ArrayList][int[]]$Guess = @()
     [System.Collections.ArrayList][int[]]$Err = @()
 
-    foreach ($i in 1..$Inputs.Count) {
-        [void]$Sum.Add($Inputs.Characters[$i-1] * $Weight[$i-1])
-        [void]$(switch ($Sum[$i-1]) {
-            {$_ -ne $Inputs.Characters[$i-1]} {$Guess.Add(0)}
+    $Counter = $Inputs.Count - 1
+    foreach ($i in 0..$Counter) {
+        [void]$Sum.Add($Inputs.Characters[$i] * $Weight[$i])
+
+        # Activation
+        [void]$(switch ($Sum[$i]) {
+            {$_ -ne $Inputs.Characters[$i]} {$Guess.Add(0)}
             default {$Guess.Add(1)}
         })
 
-        [void]$Err.Add(1 - $Guess[$i-1])
+        [void]$Err.Add(1 - $Guess[$i])
     }
 
-    $Result = 1..$Inputs.Count | ForEach-Object {
+    $Result = 0..$Counter | ForEach-Object {
         [PSCustomObject]@{
-            Sum = '{0:n2}' -f $Sum[$_-1]
-            Guess = '  {0}' -f $Guess[$_-1]
-            Words = $Inputs.Word[$_-1]
+            Sum = '{0:n2}' -f $Sum[$_]
+            Guess = '  {0}' -f $Guess[$_]
+            Words = $Inputs.Word[$_]
         }
     }
 
     $Result
-
-    ""; 'Correct guess: {0}' -f ($Guess | Select-String '1').Count
+    "`nInput: {0}`nCorrect guess: {1}" -f $Inputs.Count, ($Guess | Select-String '1').Count
 }
 
 $Inputs = Get-Input
